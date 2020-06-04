@@ -1,0 +1,165 @@
+################################################################################################################################
+Django, the Python web framework for "perfectionists with deadlines."
+
+Python can be used to build a website (Django).
+A website can be used to allow (anyone) to run your favourite python script - webtool.
+
+This tutorial tutorial_django_HRW holds some basic ingredients to set up a proper django webtool.
+
+Dirk Diederen
+################################################################################################################################
+
+
+#### Virtual environment
+# activate
+call C:\path\to\django_tutorial_project_venv\Scripts\activate.bat   	            # for windows
+source /path/to/django_tutorial_project_venv/bin/activate 		                    # for linux
+
+
+
+
+
+
+#### Set up a queue manager for asynchronous tasks
+# two reasons to go asynchronous, i.e. use a queue:
+#1. tasks may take a long time (too long for the user to wait)
+#2. too many tasks that are executed at the same time will overload the server.
+
+# the queue will spread out the load for the server in time (i.e. no peaks that crash the server).
+# cluster of workers that handle the queue can be separately deployed.
+# the queue manager can be used to monitor the tasks in the admin tab (queued, completed:success/failed).
+
+# two main options to handle tasks on completion: 
+#1. webhook (think of payment services). Javascript is sent to the user that polls some link to check if the results are already available.
+#2. email. Once the resuls are ready, the webserver sends an email (with the link to the results) to the user.
+
+
+
+
+#### Settings
+# hrwproject/settings.py:
+INSTALLED_APPS = [
+    ...
+    'django_q',
+]
+
+# Queue
+Q_CLUSTER = {
+    'name': 'HRWprojectDjangoORM',
+    'timeout': 1200,	# Timeout in secs for a task
+    'save_limit': 100,	# Store latest 10 results only
+    'catch_up': False,	# Ignore un-run scheduled tasks
+    'orm': 'default'	# Django database connection
+}
+
+CACHES = {
+    'default': {
+		'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'djangoq-localmem',
+    }
+}
+
+
+
+
+
+
+# migrate - after changing anything related to the databases, django requires migrations:
+python djangoDev_migrateDB.py
+
+# check the result at http://hydra:8001/admin/django_q/
+
+
+
+#### Start the cluster of workers
+# start the cluster in a separate SSH session:      
+source /path/to/django_tutorial_project_venv/bin/activate 		                    # activate venv
+cd /path/to/django_tutorial_project                                                 # cd to project
+python manage.py qcluster                                                           # start cluster of workers
+
+
+
+
+#### Test the cluster using a basic task
+# hrwapp1/tasks.py:
+import time
+
+def task_order_fruit(fruit_type,num_fruit,type_task):
+    time.sleep(int(num_fruit))   # e.g. 2 apples take 2 secs
+    return '%s: %s_%s' % (type_task,fruit_type, num_fruit)
+
+
+
+#### Requests
+hrwapp1/urls.py:
+...
+
+urlpatterns = [
+    ...
+    path('taskrequest/', views.hrwapp1_taskrequest, name="hrwapp1_taskrequest"),
+    path('hrwapp1_taskresult/<str:task_id>/', views.hrwapp1_taskresult, name="hrwapp1_taskresult"),
+]
+
+
+hrwapp1/views.py:
+....
+from django_q.models import Task
+from django_q.tasks import async_task, result
+import hrwapp1.tasks as tasks
+from django.http import JsonResponse
+
+def hrwapp1_taskrequest(request):
+    # init
+    result_sync1 = "no sync1 result yet"
+    result_sync2 = "no sync2 result yet"
+    async_task_id = 'no_id'
+
+    # get items from request
+    dict_items = {}
+    if request.method == 'POST':
+        for key, value in request.POST.items():
+            if key != 'csrfmiddlewaretoken':
+                dict_items[key] = value
+
+
+        # handle request
+        if dict_items['type_task']=='sync':
+            # first sync
+            cmd = 'tasks.task_order_fruit(**dict_items)'
+            result_sync1 = eval(cmd)
+
+        if dict_items['type_task']=='async':
+            task_id = async_task(
+                'hrwapp1.tasks.task_order_fruit',
+                **dict_items,
+            )
+            async_task_id = task_id
+            result_sync2 = str(task_id) + ' added to the queue'
+
+
+    # render
+    context = {}
+    context['result_sync1'] = result_sync1
+    context['result_sync2'] = result_sync2
+    context['async_task_id'] = async_task_id
+    return render(request, 'hrwapp1/hrwapp1_taskrequest.html', context=context)# -*- coding: utf-8 -*-
+
+def hrwapp1_taskresult(request,task_id):
+    # this is the async result view, which is going to be polled by the client with javascript
+
+    # try to get the result
+    try:
+        bla = Task.objects.get(id=task_id)
+        result_async = bla.result
+    except:
+        result_async = 'No async result just yet..'
+    print(result)
+
+    # send async
+    context = {}
+    context['result_async'] = result_async
+    return JsonResponse(context)
+
+
+#### check result
+# try to order some apples or bananas at http://hydra:8001/hrwapp1/taskrequest/

@@ -1,0 +1,169 @@
+#### 0. Connect to raspberry pi
+This section enables you to remotely connect to the pi through a secure shell (SSH) connection. SSH provides a secure channel over an unsecured network in a client�server architecture. 
+
+# 1. Download MobaXterm home edition
+https://mobaxterm.mobatek.net/download.html
+
+# 2. Connect to the wifi network broadcasted by the raspberry pi
+ssid = HRW-Tutorial
+pass = Tutorial1
+
+# 3. Create a new SSH session (in MobaXterm)
+ipaddress = 172.24.1.1
+port = 22
+user = pi
+pass = raspberry
+
+
+
+#### A. installation using the SSH terminal 
+This section takes you through installation of the necessary software (python, apache and mod-wsgi) using the terminal. 
+
+# 1. install Nginx webserver (Engine-X)
+sudo apt install nginx -y
+
+# 2. install python virtual environment
+sudo apt install python3-venv -y
+python3 -m venv "/home/pi/tutorial/python_venv/"
+source "/home/pi/tutorial/python_venv/bin/activate"
+pip install --upgrade pip
+deactivate
+
+# 3. install uWSGI
+sudo mkdir /etc/uwsgi/
+sudo chown -R pi:pi /etc/uwsgi/
+#virtualenv -p python "/etc/uwsgi/python27_venv_uwsgi/"
+python3 -m venv "/etc/uwsgi/python_venv_uwsgi/"
+#source "/etc/uwsgi/python27_venv_uwsgi/bin/activate"
+source "/etc/uwsgi/python_venv_uwsgi/bin/activate"
+pip install --upgrade pip
+pip install uwsgi
+
+
+
+#### B. Set up the WSGI-server and test if it works.
+WSGI is an interface by which server and application communicate (needed for the dynamic website).
+
+#1. change ownership to be able to easily edit files
+sudo chown -R pi:pi /var/www/html
+sudo chown -R pi:pi /etc/nginx/
+
+# 2. create test application (This is the python way of writing a website)
+echo "
+def application(environ, start_response):
+    status = '200 OK'
+    output = b'Hello World! (It works)'
+
+    response_headers = [('Content-type', 'text/plain'),
+                        ('Content-Length', str(len(output)))]
+    start_response(status, response_headers)
+
+    return [output]
+" > /var/www/html/test_wsgi.py
+
+# 3. run uWSGI
+uwsgi --http :8001 --wsgi-file "/var/www/html/test_wsgi.py"
+
+# 4. check if the test webserver works (in your web browser, e.g. Chrome, Safari, etc). Make sure the ip-address is that of the host device (the raspberry pi).
+http://172.24.1.1:80/index.nginx-debian.html
+http://172.24.1.1:8001/
+
+
+
+#### C. Deploy a website
+
+
+# 3. Copy the static website html file to the correct location
+mkdir -p /home/pi/tutorial/website/static
+<copy file>
+
+# 4. Copy the dynamic website python script to the correct location
+mkdir -p /home/pi/tutorial/website/dynamic
+<copy file>
+
+# 1. set up a virtual host (one for each website, since the raspberry pi can host multiple websites, using different ports).
+mkdir /etc/uwsgi/vassals/
+mkdir /etc/uwsgi/log/
+sudo chown -R www-data:www-data /etc/uwsgi/log/
+echo "
+[uwsgi]
+virtualenv = /home/pi/tutorial/python_venv
+chdir = /home/pi/tutorial/website/dynamic/
+wsgi-file = wsgi.py
+
+master = true
+processes = 1
+threads = 2
+
+uid = www-data
+gid = www-data
+
+socket = /tmp/tutorial.sock
+chmod-socket = 664
+vacuum = true
+die-on-term = true
+daemonize = /etc/uwsgi/log/tutorial.log
+" > /etc/uwsgi/vassals/tutorial.ini
+
+#sudo -u www-data "/etc/uwsgi/python27_venv_uwsgi/bin/uwsgi" --ini /etc/uwsgi/vassals/tutorial.ini
+sudo -u www-data "/etc/uwsgi/python_venv_uwsgi/bin/uwsgi" --ini /etc/uwsgi/vassals/tutorial.ini
+
+# 2. Configure the server (vassal)
+sudo rm /etc/nginx/sites-enabled/default
+
+echo "
+# configuration of the server 
+server {
+    listen 8002;
+    server_name localhost;
+
+    location /static {
+        alias /home/pi/tutorial/website/static; # your Django project's static files - amend as required
+    }
+    location /dynamic {
+        include uwsgi_params;
+        uwsgi_pass unix:/tmp/tutorial.sock;
+    }
+}
+" > /etc/nginx/sites-available/tutorial
+
+# 5. Enable the website
+sudo ln -s /etc/nginx/sites-available/tutorial /etc/nginx/sites-enabled
+sudo systemctl restart nginx
+
+# 6. create the emperor (master) configuration, where the emperor can have multiple vassals (websites)
+echo "
+[uwsgi]
+emperor = /etc/uwsgi/vassals
+uid = www-data
+gid = www-data
+" >  /etc/uwsgi/emperor.ini
+
+# 6. Create service (start up script)
+sudo su
+echo "
+[Unit]
+Description=uWSGI Emperor
+After=syslog.target
+
+[Service]
+#ExecStart=/etc/uwsgi/python27_venv_uwsgi/bin/uwsgi --ini /etc/uwsgi/emperor.ini
+ExecStart=/etc/uwsgi/python_venv_uwsgi/bin/uwsgi --ini /etc/uwsgi/emperor.ini
+
+Restart=always
+KillSignal=SIGQUIT
+Type=notify
+StandardError=syslog
+NotifyAccess=all
+
+[Install]
+WantedBy=multi-user.target
+" >  /etc/systemd/system/emperor.uwsgi.service
+
+# 7. Enable start on boot
+systemctl enable emperor.uwsgi.service
+reboot
+
+# 8. Test if all works (in a browser)
+http://172.24.1.1:8002/static
+http://172.24.1.1:8002/dynamic

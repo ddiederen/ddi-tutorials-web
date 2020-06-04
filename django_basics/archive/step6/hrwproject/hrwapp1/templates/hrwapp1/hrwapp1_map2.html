@@ -1,0 +1,54 @@
+{% extends "base_generic.html" %} {% load leaflet_tags %}
+
+{% block staticextra %}
+{% leaflet_css %}
+{% leaflet_js %}
+{% endblock %}
+
+{% block content %}
+<header class="w3-container" style="padding-top:22px">
+    <h5><b><i class="fa fa-dashboard"></i> My Dashboard</b></h5>
+</header>
+<div class="w3-panel">
+    <div class="w3-row-padding" style="margin:0 -16px">
+        {% block map %}
+        <div class="w3-third">
+            <h5>Regions</h5>
+            This is the hrwapp1_map2 template.
+            Now we will try to put in a lot of data.
+            
+            <br> 
+            The map will go here:
+
+
+           <br><br>
+            <div>
+                {% leaflet_map "main" %}
+            </div>
+            <script type="text/javascript">
+                var dataurl = '{% url "data" %}';
+                window.addEventListener("map:init", function (event) {
+                    var map = event.detail.map;
+                    // Download GeoJSON data with Ajax
+                    fetch(dataurl)
+                    .then(function(resp) {
+                        return resp.json();
+                    })
+                    .then(function(data) {
+                        L.geoJson(data, {
+                            onEachFeature: function onEachFeature(feature, layer) {
+                                var props = feature.properties;
+                                var content = `<h5>${props.django_id}</h5><h3>${props.room_type}, price: ${props.price}</h3><p>${props.name}</p>`;
+                                layer.bindPopup(content);
+                            }
+                        }).addTo(map);
+                    });
+                });
+            </script>
+
+        </div>
+        {% endblock %}
+
+    </div>
+</div>
+{% endblock %}

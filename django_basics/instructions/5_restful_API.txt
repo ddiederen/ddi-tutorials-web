@@ -1,0 +1,188 @@
+################################################################################################################################
+Django, the Python web framework for "perfectionists with deadlines."
+
+Python can be used to build a website (Django).
+A website can be used to allow (anyone) to run your favourite python script - webtool.
+
+This tutorial tutorial_django_HRW holds some basic ingredients to set up a proper django webtool.
+
+Dirk Diederen
+################################################################################################################################
+
+
+#### Virtual environment
+# activate
+call C:\path\to\django_tutorial_project_venv\Scripts\activate.bat   	            # for windows
+source /path/to/django_tutorial_project_venv/bin/activate 		                    # for linux
+
+
+
+
+
+
+#### Django REST framework: how remote users should interact with the databases
+# see https://www.django-rest-framework.org/tutorial/quickstart/
+# interaction with SQL database through webrequests (the right way, with a restful API)
+# suggested to use modelviewsets
+
+
+# hrwproject/settings.py:
+INSTALLED_APPS = [
+    ...
+    'rest_framework',
+]
+
+# REST API
+REST_FRAMEWORK = {
+    # Use Django's standard `django.contrib.auth` permissions, or allow read-only access for unauthenticated users.
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,
+
+}
+
+
+
+
+#### URLs
+# hrwproject/urls.py:
+...
+
+# REST stuff
+from rest_framework.routers import DefaultRouter
+from rest_framework.schemas import get_schema_view
+router = DefaultRouter() # Create a router and register our viewsets with it.
+router.register(r'records', views.RecordViewSet)
+
+# URLs
+urlpatterns = [
+    ...
+    path('schema/', get_schema_view(title="hrwproject", description="API for hrwproject", version="1.0.1"),name='hrwproject_schema'),
+    path('', include(router.urls)),
+]
+
+
+
+
+
+#### Views
+# hrwproject/views.py:
+...
+# REST imports
+from hrwapp1models import Record
+from rest_framework import viewsets
+from rest_framework import permissions
+from hrwproject.serializers import RecordSerializer
+from hrwproject.permissions import IsOwnerOrReadOnly
+
+...
+# REST viewset
+class RecordViewSet(viewsets.ModelViewSet):
+    """
+    This viewset automatically provides `list`, `create`, `retrieve`,
+    `update` and `destroy` actions.
+
+    Additionally we also provide an extra `highlight` action.
+    """
+    queryset = Record.objects.all()
+    serializer_class = RecordSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly,
+                          IsOwnerOrReadOnly]
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+
+
+
+
+
+#### Serializers
+
+# hrwproject/serializers.py:
+# imports
+from rest_framework import serializers
+from hrwapp1models import Record
+
+# serializer
+class RecordSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Record
+        fields = [
+            'django_id',
+            'id',
+            'name',
+            'host_id',
+            'host_name',
+            'neighbourhood_group',
+            'neighbourhood',
+            'latitude',
+            'longitude',
+            'room_type',
+            'price',
+            'minimum_nights',
+            'number_of_reviews',
+            'last_review',
+            'reviews_per_month',
+            'calculated_host_listings_count',
+            'availability_365',
+            'geom',
+        ]
+
+
+
+
+#### Permissions
+
+# hrwproject/permissions.py:
+# imports
+from rest_framework import permissions
+
+# permissions
+class IsOwnerOrReadOnly(permissions.BasePermission):
+    """
+    Custom permission.
+    To only allow owners of an object to edit it, an 'owner' entry is required in the table
+    """
+
+    def has_object_permission(self, request, view, obj):
+        # Read permissions are allowed to any request,
+        # so we'll always allow GET, HEAD or OPTIONS requests.
+        if request.method in permissions.SAFE_METHODS:
+            return True
+
+        # Write permissions are only allowed to the owner of the snippet.
+        # return obj.owner == request.user
+
+        # all allowed
+        return True
+
+
+
+
+
+
+
+####  options to interact with the SQL database:
+
+# administrator:
+- django admin
+- SSH to server and use python/R
+- remote SQL connection (e.g. postgreSQL)
+
+# any person on the web:
+- REST API (but limited by the settings in the hrwproject/permissions.py file)
+
+
+
+
+#### Check results
+# check the results at:
+# schema at:        http://hydra:8001/schema/
+# list at :         http://hydra:8001/records/
+# list item at:     http://hydra:8001/records/1/
+
+
+

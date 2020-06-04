@@ -1,0 +1,87 @@
+{% extends "base_generic.html" %} 
+
+{% block content %}
+<header class="w3-container" style="padding-top:22px">
+    <h5><b><i class="fa fa-dashboard"></i> My Dashboard</b></h5>
+</header>
+<div class="w3-panel">
+    <div class="w3-row-padding" style="margin:0 -16px">
+        {% block map %}
+        <div class="w3-third">
+            <h5>Regions</h5>
+            This is where we can submit a task request.
+            <br><br>
+
+            <fieldset>
+                First we do it synchronously. The server hangs until the request is handled. Each number of fruit takes a second.
+                <br><br>
+                <form action="" method="post">
+                    <input type="type_task" name="type_task" value="sync" readonly>
+                    <select class="form-control" name="fruit_type">
+                        <option>Apple</option>
+                        <option>Banana</option>
+                    </select>
+                    <input type="number" name="num_fruit" min="1" max="10">
+                    <button type="submit">Order fruit</button>
+                    {% csrf_token %}
+                </form>
+                <br>
+                The result goes here:<br>
+                {{result_sync1}}
+            </fieldset>
+
+
+
+            <br><br>
+
+
+
+            <fieldset>
+                Then we do it asynchronously. The task is sent to the queue. In the admin tab it can be monitored. It is handled by a cluster of workers.
+                <br><br>
+                <form action="" method="post">
+                    <input type="type_task" name="type_task" value="async" readonly>
+                    <select class="form-control" name="fruit_type">
+                        <option>Apple</option>
+                        <option>Banana</option>
+                    </select>
+                    <input type="number" name="num_fruit" min="1" max="10">
+                    <button type="submit">Order fruit</button>
+                    {% csrf_token %}
+                </form>
+                <br>
+                The immediate result from the sync view goes here:<br>
+                {{async_task_id}} <br>
+                {{result_sync2}}<br><br>
+                
+                The delayed (async) result goes here:<br>
+                <div id="resultAsync"></div>
+
+                <script>
+                    function getResult (resultURL) {
+                        fetch(resultURL).then(function(response) {
+                            response.json().then(function(data) {
+                                // update the appropriate UI components
+                                document.getElementById("resultAsync").innerHTML=data.result_async; 
+                                if(data.result_async.startsWith("No")){
+                                    setTimeout(getResult, 1000, resultURL);
+                                }
+                            });
+                        });
+                    }
+                    var resultURL = '{% url "hrwapp1_taskresult" async_task_id %}';  // django template usage
+                    getResult(resultURL);
+                </script>
+            </fieldset>
+
+            <br><br>
+            As you may notice, here we kind of hope that the user sends a proper POST request, with all required inputs. 
+            <br>Requests can be validated on the client-side (e.g. HTML 'required').
+            <br>But requests should definitely be validated on the server-side (if only for security reasons), so the next step is to make RESTful webrequests.
+            <br><br>
+        </div>
+        {% endblock %}
+
+    </div>
+</div>
+{% endblock %}

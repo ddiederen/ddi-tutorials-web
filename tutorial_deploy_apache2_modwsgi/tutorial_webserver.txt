@@ -1,0 +1,111 @@
+#### 0. Connect to raspberry pi
+This section enables you to remotely connect to the pi through a secure shell (SSH) connection. SSH provides a secure channel over an unsecured network in a client–server architecture. 
+
+# 1. Download MobaXterm home edition
+https://mobaxterm.mobatek.net/download.html
+
+# 2. Connect to the wifi network broadcasted by the raspberry pi
+ssid = HRW-Tutorial
+pass = Tutorial1
+
+# 3. Create a new SSH session (in MobaXterm)
+ipaddress = 172.24.1.1
+port = 22
+user = pi
+pass = raspberry
+
+
+
+#### A. installation using the SSH terminal 
+This section takes you through installation of the necessary software (python, apache and mod-wsgi) using the terminal. 
+
+# 1. install Apache 2 webserver (A Patchy server)
+sudo apt install apache2 -y
+
+# 2. install python virtual environment
+sudo apt install python3-venv -y
+python3 -m venv "/home/pi/tutorial/python_venv/"
+source "/home/pi/tutorial/python_venv/bin/activate"
+pip install --upgrade pip
+
+# 3. install mod-WSGI
+sudo apt install libapache2-mod-wsgi-py3 -y
+
+
+
+#### B. Set up the WSGI-server and test if it works
+WSGI is an interface by which server and application communicate. (needed for the dynamic website)
+
+# change ownership to be able to easily edit files
+sudo chown -R pi:pi /etc/apache2
+sudo chown -R pi:pi /var/www/html
+
+# 1. edit wsgi configuration file
+echo "
+WSGIScriptAlias /test_wsgi /var/www/html/test_wsgi.py
+" > /etc/apache2/conf-available/wsgi.conf
+
+# 2. create test application (This is the python way of writing a website)
+echo "
+def application(environ, start_response):
+    status = '200 OK'
+    output = b'Hello World! (It works)'
+
+    response_headers = [('Content-type', 'text/plain'),
+                        ('Content-Length', str(len(output)))]
+    start_response(status, response_headers)
+
+    return [output]
+" > /var/www/html/test_wsgi.py
+
+# 3. enable configuration and reload apache
+sudo a2enconf wsgi
+sudo systemctl reload apache2
+
+# 4. check if the test webserver works (in your web browser, e.g. Chrome, Safari, etc). Make sure the ip-address is that of the host device (the raspberry pi).
+http://172.24.1.1:80/index.html
+http://172.24.1.1:80/test_wsgi
+
+
+
+#### C. Deploy a website
+# 1. set up a virtual host (one for each website, since the raspberry pi can host multiple websites, using different ports).
+
+echo "
+<VirtualHost *:8001>
+
+    DocumentRoot /home/pi/tutorial/website/static
+
+    <Directory /home/pi/tutorial/website/static>
+        Require all granted
+    </Directory>
+    <Directory /home/pi/tutorial/website/dynamic>
+        <Files wsgi.py>
+            Require all granted
+        </Files>
+    </Directory>
+
+    WSGIDaemonProcess tutorial python-home=/home/pi/tutorial/python_venv/ python-path=/home/pi/tutorial/website/dynamic
+    WSGIProcessGroup tutorial
+    WSGIScriptAlias /tutorial /home/pi/tutorial/website/dynamic/wsgi.py
+
+</VirtualHost>
+" > /etc/apache2/sites-available/tutorial.conf
+
+# 2. Make sure the apache server is listening on the chosen port (8001), so that we can make a connection to the website
+echo "
+Listen 80
+Listen 8001
+" > /etc/apache2/ports.conf
+
+# 3. Copy the static website html file to the correct location (/home/pi/tutorial/website/static/index.html)
+
+# 4. Copy the dynamic website python script to the correct location (/home/pi/tutorial/website/dynamic/wsgi.py)
+
+# 5. Enable the website
+sudo a2ensite tutorial
+sudo systemctl reload apache2
+
+# 6. Test if all works (in a browser)
+http://172.24.1.1:8001/index.html
+http://172.24.1.1:8001/tutorial

@@ -1,0 +1,181 @@
+################################################################################################################################
+Django, the Python web framework for "perfectionists with deadlines."
+
+Python can be used to build a website (Django).
+A website can be used to allow (anyone) to run your favourite python script - webtool.
+
+This tutorial tutorial_django_HRW holds some basic ingredients to set up a proper django webtool.
+
+Dirk Diederen
+################################################################################################################################
+
+
+#### Virtual environment
+# activate
+call C:\path\to\django_tutorial_project_venv\Scripts\activate.bat   	            # for windows
+source /path/to/django_tutorial_project_venv/bin/activate 		                    # for linux
+
+
+
+
+
+
+#### Set up project
+# navigate to folder
+cd /path/to/projects
+
+# set up project
+django-admin startproject hrwproject
+
+# should be in /path/to/projects/hrwproject
+
+# put the following files in the project directory
+/path/to/projects/hrwproject/djangoDev_migrateDB.py
+/path/to/projects/hrwproject/djangoDev_figBokeh.py
+
+
+
+
+
+#### Set up the first of many apps
+# navigate to project:
+cd /path/to/projects/hrwproject
+
+# set up app:
+python manage.py startapp hrwapp1
+
+# edit in hrwproject/settings.py:
+INSTALLED_APPS = [
+    ...
+    'hrwapp1.apps.Hrwapp1Config',
+]
+
+# should be in /path/to/projects/hrwproject/hrwapp1
+
+
+
+
+
+
+#### SETTINGS
+# Data base connections
+# hrwproject/settings.py:
+
+...
+
+# make sure to separate the databases for app portability
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'hrwproject/default.db'),
+    },
+    'hrwapp1_db': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'hrwapp1/hrwapp1.db'),
+    },
+}    
+DATABASE_ROUTERS = [
+    'hrwproject.dbRouter.HrwprojectDBRouter',
+    'hrwapp1.dbRouter.Hrwapp1DBRouter',
+]
+
+...
+
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/2.1/howto/static-files/
+STATICFILES_DIRS = [                                        # non-standard locations
+    os.path.join(BASE_DIR, "hrwproject/static"),
+]
+STATIC_ROOT = os.path.join(BASE_DIR, "static_collected")    # URL to where static files are collected
+STATIC_URL = "/static/"                                     # URL presented to client
+
+
+
+
+
+#### Data base routers
+# put the dbrouters in the right directories:
+# hrwproject/dbRouter.py
+# hrwapp1/dbRouter.py
+
+
+
+
+# migrate - after changing anything related to the databases, django requires migrations:
+python djangoDev_migrateDB.py
+
+
+
+
+#### (optional settings) Email backend
+# hrwproject/settings.py:
+
+...
+
+# email option 1: configure smtp
+#EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+#EMAIL_USE_TLS = True
+#EMAIL_PORT = 587
+#EMAIL_HOST = 'smtp.gmail.com'
+#EMAIL_HOST_USER =  'dirkdiederen@gmail.com'
+#EMAIL_HOST_PASSWORD = 'pleasechange'
+#DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+#SERVER_EMAIL = EMAIL_HOST_USER
+
+# emails option 2: forgot password, puts sent emails as files in EMAIL_FILE_PATH
+# create a directory in the django project called "emails_sent"
+# append to hrwproject/settings.py:
+EMAIL_BACKEND = "django.core.mail.backends.filebased.EmailBackend"
+EMAIL_FILE_PATH = os.path.join(BASE_DIR, "emails_sent")
+
+
+
+
+
+
+#### (optional settings) Global website settings that can be managed through the admin tab
+# hrwproject/settings.py:
+
+...
+
+INSTALLED_APPS = [
+    ...
+    'constance',
+    'constance.backends.database',
+]
+
+...
+
+# (optional settings) Constance dynamic website settings - see website admin tab
+CONSTANCE_BACKEND = 'constance.backends.database.DatabaseBackend'
+CONSTANCE_IGNORE_ADMIN_VERSION_CHECK = True # Use this option in order to skip hash verification
+CONSTANCE_DBS = ['default']
+CONSTANCE_ADDITIONAL_FIELDS = {
+    'select_automatic_sitetree': ['django.forms.fields.ChoiceField', {
+        'widget': 'django.forms.Select',
+        'choices': (("automatic", "Automatic"), ("sitetree", "Sitetree"))
+    }],
+}
+CONSTANCE_CONFIG = {
+    'THE_ANSWER': (42, 'Answer to the Ultimate Question of Life, '
+                       'The Universe, and Everything'),
+    'SELECT_MENU': ('automatic', 'You can set up your own navigation menu using sitetree in the admin panel.', 'select_automatic_sitetree'),
+}
+CONSTANCE_CONFIG_FIELDSETS = {
+    'Stuff1': (
+        'THE_ANSWER', 
+        'SELECT_MENU',
+    ),
+}
+
+
+
+
+# migrate - after changing anything related to the databases, django requires migrations:
+python djangoDev_migrateDB.py
+
+
+#### (later) Deployment
+# (not now, but at deployment, which is after the development stage) run this command when deploying the website with a webserver (e.g. nginx, apache)
+django-admin collectstatic
+# don't forgot to tell the webserver (e.g. nginx, apache) where to find the static files

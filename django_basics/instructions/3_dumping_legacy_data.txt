@@ -1,0 +1,121 @@
+################################################################################################################################
+Django, the Python web framework for "perfectionists with deadlines."
+
+Python can be used to build a website (Django).
+A website can be used to allow (anyone) to run your favourite python script - webtool.
+
+This tutorial tutorial_django_HRW holds some basic ingredients to set up a proper django webtool.
+
+Dirk Diederen
+################################################################################################################################
+
+
+#### Virtual environment
+# activate
+call C:\path\to\django_tutorial_project_venv\Scripts\activate.bat   	            # for windows
+source /path/to/django_tutorial_project_venv/bin/activate 		                    # for linux
+
+
+
+
+
+#### Getting the python code from the SQL data base
+
+# since we are lazy, we are going to use a trick to rip the models.py file from the legacy data base:
+#1. rename the hrwproject/default.db to hrwproject/defaultBla.db 
+#2. copy the legacy database legacy.db to hrwproject/default.db
+#3. run: python manage.py inspectdb>importmodels.py
+#4. remove legacy database hrwproject/default.db
+#5. put the hrwproject/defaultBla.db back to hrwproject/default.db (rename)
+
+
+
+
+#### Putting the information in the right file
+
+# copy the model (class) from importmodels.py to the django models.py file
+
+# rename the class to Record
+# comment out the meta data
+# add in a django autofield for ID:    
+    django_id = models.AutoField(primary_key=True)
+# add in a django field for later usage in the tutorial
+    geom = PointField()
+
+# add the admin representation string
+    # this string is used to represent the objects in the admin tab
+    def __str__(self):
+        return str(self.django_id)+"_"+str(self.name)
+
+
+# resulting hrwapp1/models.py:
+from django.db import models
+from djgeojson.fields import PointField
+
+# Create your models here.
+class Record(models.Model):
+    id = models.IntegerField(blank=True, null=True)
+    name = models.TextField(blank=True, null=True)
+    host_id = models.IntegerField(blank=True, null=True)
+    host_name = models.TextField(blank=True, null=True)
+    neighbourhood_group = models.TextField(blank=True, null=True)
+    neighbourhood = models.TextField(blank=True, null=True)
+    latitude = models.TextField(blank=True, null=True)  # This field type is a guess.
+    longitude = models.TextField(blank=True, null=True)  # This field type is a guess.
+    room_type = models.TextField(blank=True, null=True)
+    price = models.TextField(blank=True, null=True)  # This field type is a guess.
+    minimum_nights = models.IntegerField(blank=True, null=True)
+    number_of_reviews = models.IntegerField(blank=True, null=True)
+    last_review = models.DateField(blank=True, null=True)
+    reviews_per_month = models.IntegerField(blank=True, null=True)
+    calculated_host_listings_count = models.IntegerField(blank=True, null=True)
+    availability_365 = models.IntegerField(blank=True, null=True)
+    django_id = models.AutoField(primary_key=True)
+    geom = PointField()
+
+    # this string is used to represent the objects in the admin tab
+    def __str__(self):
+        return str(self.django_id)+"_"+str(self.name)
+
+    # class Meta:
+    #     managed = False
+    #     db_table = 'AB_NYC_2019'
+
+
+
+
+#### register the model in the admin tab (optional)
+# append to hrwapp1/admin.py:
+from hrwapp1.models import Record
+admin.site.register(Record)
+
+
+
+
+# migrate - after changing anything related to the databases, django requires migrations:
+python djangoDev_migrateDB.py
+
+
+
+#### Dumping data
+
+# there are four main ways to interact with the SQL databases
+#1. through the admin tab
+#2. using a remote SQL connection (e.g. postgreSQL)
+#3. SSH to the webserver and using the python ORM or maybe R
+#4. using (RESTful) http requests (GET,POST,PUT,DELETE)
+
+# right now we will use option 3 to dump the legacy databases:
+# copy the legacy database to hrwapp1/legacy.db
+python djangoDev_dumpLegacyDB.py
+
+# check if the data is now in the hrwapp1/hrwapp1.db (check filesize)
+# check the result at http://hydra:8001/admin/hrwapp1/record/
+
+
+# if something went wrong:
+#1. remove hrwapp1/hrwapp1.db, 
+#2. remove the folder hrwapp1/migrations, 
+#3. fix the problem, 
+#4. run: python djangoDev_migrateDB.py, 
+#5. try again: python djangoDev_dumpLegacyDB.py

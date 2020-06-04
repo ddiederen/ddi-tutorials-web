@@ -1,0 +1,48 @@
+{% extends "base_generic.html" %} {% load leaflet_tags %}
+
+{% block staticextra %}
+{% leaflet_css %}
+{% leaflet_js %}
+{% endblock %}
+
+{% block content %}
+<header class="w3-container" style="padding-top:22px">
+    <h5><b><i class="fa fa-dashboard"></i> My Dashboard</b></h5>
+</header>
+<div class="w3-panel">
+    <div class="w3-row-padding" style="margin:0 -16px">
+        {% block map %}
+        <div class="w3-third">
+            <h5>Regions</h5>
+            This is the hrwapp1_map template. We have to make a map!
+
+            
+            <br> 
+            The map will go here:
+            <br> 
+            <br>
+            Latitude: {{ record.latitude }},
+            Longitude: {{ record.longitude }}
+
+            <br><br>
+            <div>
+                <h1>{{ record.name }}</h1>
+                {% leaflet_map "main" callback="map_init" %}
+            </div>
+
+            <script type="text/javascript">
+                function map_init(map, options) {
+                    // get point lat and lon
+                    var lon = "{{ record.longitude }}";
+                    var lat = "{{ record.latitude }}";
+                    // zoom to point & add it to map
+                    map.setView([lat, lon], 12);
+                    L.marker([lat, lon]).addTo(map);
+                }
+            </script>
+            <br><br>
+        {% endblock %}
+
+    </div>
+</div>
+{% endblock %}

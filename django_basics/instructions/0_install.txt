@@ -1,0 +1,65 @@
+################################################################################################################################
+Django, the Python web framework for "perfectionists with deadlines."
+
+Python can be used to build a website (Django).
+A website can be used to allow (anyone) to run your favourite python script - webtool.
+
+This tutorial tutorial_django_HRW holds some basic ingredients to set up a proper django webtool.
+
+Dirk Diederen
+################################################################################################################################
+
+
+
+#### Install: global
+# install your python (3.7)
+
+# install virutal environment package
+pip install virtualenv
+
+
+
+
+
+#### Virtual environment
+# set up venv
+/path/to/python37interpreter.bin -m venv /path/to/django_tutorial_project_venv  	# each django project has its own virtual environment. Dont put it in the django project folder.
+
+# activate
+call C:\path\to\django_tutorial_project_venv\Scripts\activate.bat   	            # for windows
+source /path/to/django_tutorial_project_venv/bin/activate 		                    # for linux
+
+
+
+
+
+
+#### Packages
+# latest pip
+pip install --upgrade pip
+
+
+# install packages
+pip install Django==2.1.*               # this version atm because of some geojson issues
+
+pip install django-constance[database]  # global django settings
+pip install pandas                      # no explanation required - but to be used for the legacy database
+pip install django-pandas               # no explanation required - but to be used for the legacy database
+pip install sqlalchemy                  # some sql stuff to read legacy database
+
+pip install bokeh                       # the plotting library
+
+pip install django-leaflet              # the django stuff to wrap the javascript leaflet library
+pip install django-geojson              # geojson serialisation support
+pip install jsonfield                   # json field for a geo admin page
+
+pip install django-q                    # the simple django queue manager
+
+pip install djangorestframework         # the REST framework
+pip install markdown                    # Markdown support for the browsable API.
+pip install django-filter               # Filtering support
+pip install uritemplate                 # support for the API schema
+
+
+# install all packages
+pip install Django==2.1.* djangorestframework markdown django-filter django-q bokeh django-constance[database] pandas django-pandas sqlalchemy django-leaflet django-geojson jsonfield uritemplate

@@ -1,0 +1,17 @@
+{% extends "base_generic.html" %} 
+
+{% block content %}
+<header class="w3-container" style="padding-top:22px">
+    <h5><b><i class="fa fa-dashboard"></i> My Dashboard</b></h5>
+</header>
+<div class="w3-panel">
+    <div class="w3-row-padding" style="margin:0 -16px">
+        {% block map %}
+        <div class="w3-third">
+            <h5>Regions</h5>
+            This is the hrwapp1_index template. We have to make a map!
+        </div>
+        {% endblock %}
+    </div>
+</div>
+{% endblock %}

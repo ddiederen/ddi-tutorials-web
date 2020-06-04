@@ -1,0 +1,107 @@
+################################################################################################################################
+Django, the Python web framework for "perfectionists with deadlines."
+
+Python can be used to build a website (Django).
+A website can be used to allow (anyone) to run your favourite python script - webtool.
+
+This tutorial tutorial_django_HRW holds some basic ingredients to set up a proper django webtool.
+
+Dirk Diederen
+################################################################################################################################
+
+
+#### Virtual environment
+# activate
+call C:\path\to\django_tutorial_project_venv\Scripts\activate.bat   	            # for windows
+source /path/to/django_tutorial_project_venv/bin/activate 		                    # for linux
+
+
+
+
+
+
+
+#### Settings - Check your bokeh version and find the correct JS libraries online
+# in the HTML, for now, they will be sourced from a content delivery network (CDN, some other webservers)
+
+
+# hrwapp1/templates/hrwapp1/hrwapp1_figure.html:
+{% block staticextra %}
+<script src="http://cdn.pydata.org/bokeh/release/bokeh-1.3.4.min.js"></script>
+<script src="http://cdn.pydata.org/bokeh/release/bokeh-widgets-1.3.4.min.js"></script>
+{% endblock %}
+
+# !! when deploying an app, download these files and source them locally from the web server (static files) !!
+
+
+
+
+
+
+
+#### Interactive plotting from the SQL databases
+# https://bokeh.pydata.org/en/latest/docs/user_guide.html
+
+# see djangoDev_figBokeh.py and try to make a nice figure
+
+
+
+
+
+#### URLs
+# hrwapp1/urls.py:
+...
+
+# URLs
+urlpatterns = [
+    ...
+    path('figure/<str:input1>/', views.hrwapp1_figure, name="hrwapp1_figure"),
+]
+
+
+
+
+
+
+#### Views
+# hrwapp1/views.py:
+...
+
+from django.shortcuts import  render_to_response
+<development figure libraries here>
+
+def hrwapp1_figure(request,input1):
+
+    # figure
+	<development figure here: query, plot, >
+
+    ...
+
+    # store components
+    script, div = components(p)
+
+    # render
+    context = {}
+    context['input1'] = input1          # input1 is variable (str) that comes directly from the url (see urls.py)
+    context['script'] = script          # this is the javascript component of the Bokeh plot
+    context['div'] = div                # this is the HTML component of the Bokeh plot
+    return render_to_response('hrwapp1/hrwapp1_figure.html', context=context)# -*- coding: utf-8 -*-
+
+
+
+
+
+
+
+
+#### HTML Templates
+# copy in the following html templates:
+#hrwproject/hrwapp1/templates/hrwapp1/hrwapp1_figure.html
+
+
+
+#### Check result
+# http://hydra:8001/hrwapp1/figure/line/
+# http://hydra:8001/hrwapp1/figure/scatter/
+
+# maybe make a somewhat nicer plot?

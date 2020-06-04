@@ -1,0 +1,138 @@
+################################################################################################################################
+Django, the Python web framework for "perfectionists with deadlines."
+
+Python can be used to build a website (Django).
+A website can be used to allow (anyone) to run your favourite python script - webtool.
+
+This tutorial tutorial_django_HRW holds some basic ingredients to set up a proper django webtool.
+
+Dirk Diederen
+################################################################################################################################
+
+
+#### Virtual environment
+# activate
+call C:\path\to\django_tutorial_project_venv\Scripts\activate.bat   	            # for windows
+source /path/to/django_tutorial_project_venv/bin/activate 		                    # for linux
+
+
+
+
+
+
+
+
+#### URLs
+
+# hrwproject/urls.py:
+# Import
+from django.contrib import admin
+from django.urls import path, include, re_path
+from hrwproject import views
+
+# URLs
+urlpatterns = [
+    path('', views.home, name='home'),
+    path('hrwapp1/', include('hrwapp1.urls')),
+    path('admin/', admin.site.urls),
+    path('accounts/', include('django.contrib.auth.urls')),
+    # re_path(r'^api-auth/', include('rest_framework.urls')),
+    # path('schema/', schema_view),
+]
+
+
+
+# hrwapp1/urls.py:
+# Import
+from django.urls import path
+from hrwapp1 import views
+
+# URLs
+urlpatterns = [
+    path('', views.hrwapp1_index, name='hrwapp1_index'),
+    path('result/<str:input1>/', views.hrwapp1_result, name="hrwapp1_result"),
+]
+
+
+
+
+#### Views
+
+# hrwproject/views.py:
+# Import
+from django.shortcuts import render
+
+# Create your views here.
+def home(request):
+    context = {}
+    return render(request, 'hrwproject/hrwproject_index.html', context=context)# -*- coding: utf-8 -*-
+
+
+
+# hrwapp1/views.py:
+# Import
+from django.shortcuts import render
+
+# Create your views here.
+def hrwapp1_index(request):    
+    context = {}
+    return render(request, 'hrwapp1/hrwapp1_index.html', context=context)# -*- coding: utf-8 -*-
+
+def hrwapp1_result(request,input1):    
+    context = {}
+    context['input1'] = input1
+    return render(request, 'hrwapp1/hrwapp1_result.html', context=context)# -*- coding: utf-8 -*-
+
+
+
+
+
+#### HTML templates
+
+# hrwproject/settings.py:
+TEMPLATES = [
+    {
+        ...
+        'DIRS': [os.path.join(BASE_DIR, 'hrwproject/templates')],
+        ...
+    }
+]
+
+# from tutorial_django_HRW copy folders:
+# /path/to/projects/hrwproject/hrwproject/templates
+# /path/to/projects/hrwproject/hrwapp1/templates
+
+
+
+
+
+
+#### Test the webserver
+# make sure that you are allowed to connect to the testwebserver
+# edit hrwproject/settings.py:
+ALLOWED_HOSTS = ['*']
+
+
+# run the server in a separate SSH session:      
+source /path/to/django_tutorial_project_venv/bin/activate 		                    # activate venv
+cd /path/to/django_tutorial_project
+python manage.py runserver 0.0.0.0:8001
+# navigate to http://hydra:8001 in your favourite webclient (chrome, safari, etc)
+
+
+
+
+
+
+#### Create users
+python manage.py createsuperuser
+
+# check the result at http://hydra:8001/admin
+
+
+
+
+
+#### Also
+# see https://docs.djangoproject.com/en/2.2/intro/tutorial01/
+
